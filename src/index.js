@@ -54,18 +54,15 @@ app.post("/api/login", (req, res) => {
       .status(400)
       .json({ error: "Username and password are required" });
   }
-
   const query = "SELECT * FROM customers WHERE username = ?";
   db.query(query, [username], (err, result) => {
     if (err) {
       console.error("Database query error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
-
     if (result.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
-
     const user = result[0];
     bcrypt.compare(password, user.password, (err, isMatch) => {
       if (err) {
@@ -76,8 +73,6 @@ app.post("/api/login", (req, res) => {
       if (!isMatch) {
         return res.status(401).json({ error: "Invalid username or password" });
       }
-
-      // Store user session
       req.session.user = { id: user.id, username: user.username };
       res.json({ status: "Login successful", role: "customer" });
     });
@@ -110,7 +105,6 @@ app.post("/api/register", (req, res) => {
   );
 });
 
-//products Endpoint
 app.get("/api/products", (req, res) => {
   const query = "SELECT pid, pname, price,category FROM products";
   db.query(query, (err, results) => {
@@ -135,8 +129,6 @@ app.post("/api/cart", (req, res) => {
     pid: productId,
     quantity: 1,
   };
-
-  // Insert into the cart table
   const cartQuery =
     "INSERT INTO carts (user_id, pid, quantity) VALUES (?, ?, ?)";
   db.query(
@@ -153,20 +145,15 @@ app.post("/api/cart", (req, res) => {
   );
 });
 
-// Fetch cart items for the logged-in user
 app.get("/api/cart", (req, res) => {
   if (!req.session || !req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
   }
 
   const userId = req.session.user.id;
-  const cartProductQuery = `
-    SELECT c.pid, p.pname, p.category, p.price, p.quantity
-    FROM carts c
-    INNER JOIN products p ON c.pid = p.pid
-    WHERE c.user_id = ?;
-  `;
 
+  const cartProductQuery =
+    "SELECT p.pname, p.price, p.category, c.quantity FROM products p JOIN carts c ON p.pid = c.pid WHERE c.user_id = ? ";
   db.query(cartProductQuery, [userId], (err, results) => {
     if (err) {
       console.error("Database query error:", err);
@@ -185,7 +172,7 @@ app.get("/api/cart", (req, res) => {
       quantity: item.quantity,
     }));
 
-    res.json({ cartItems }); // Wrap the array in a 'cartItems' object
+    res.json({ cartItems });
   });
 });
 
